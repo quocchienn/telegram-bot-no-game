@@ -172,11 +172,47 @@ export default (bot) => {
     await ctx.reply(text, { reply_to_message_id: ctx.message?.message_id });
   });
 
-  // ================= SHOP =================
+ // ================= SHOP =================
 
-  
-    await ctx.reply(txt, { reply_to_message_id: ctx.message?.message_id });
+bot.command('shop', async (ctx) => {
+  let txt = '🎁 SHOP\n\n';
+  config.shop.items.forEach(i => {
+    txt += `• ${i.id} – ${i.name} – ${i.price} coin\n`;
   });
+
+  await ctx.reply(txt, { reply_to_message_id: ctx.message?.message_id });
+});
+
+bot.command('buy', async (ctx) => {
+  const parts = ctx.message.text.split(' ').filter(Boolean);
+  const id = parts[1];
+  if (!id) {
+    return ctx.reply('Sai cú pháp: /buy <id>', { reply_to_message_id: ctx.message?.message_id });
+  }
+
+  let user = await User.findOne({ telegramId: ctx.from.id });
+  if (!user) {
+    return ctx.reply('Bạn chưa có dữ liệu.', { reply_to_message_id: ctx.message?.message_id });
+  }
+
+  const item = config.shop.items.find(i => i.id === id);
+  if (!item) {
+    return ctx.reply('Không tìm thấy vật phẩm này.', { reply_to_message_id: ctx.message?.message_id });
+  }
+
+  if (user.topCoin < item.price) {
+    return ctx.reply('Bạn không đủ coin.', { reply_to_message_id: ctx.message?.message_id });
+  }
+
+  user.topCoin -= item.price;
+  await user.save();
+
+  return ctx.reply(
+    `✅ Bạn đã mua ${item.name} với giá ${item.price} coin.\n` +
+    `💰 Coin còn lại: ${user.topCoin}`,
+    { reply_to_message_id: ctx.message?.message_id }
+  );
+});
 
   
   // ================= NHIỆM VỤ: /daily & /claimdaily =================
