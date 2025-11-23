@@ -34,7 +34,7 @@ export default async (ctx, next) => {
   const text = msg.text || msg.caption || '';
   if (!text) return next();
 
-  // Chỉ xử lý trong group / supergroup
+  // ❗ Chỉ xử lý trong group / supergroup
   if (!msg.chat || (msg.chat.type !== 'group' && msg.chat.type !== 'supergroup')) {
     return next();
   }
@@ -42,67 +42,24 @@ export default async (ctx, next) => {
   const now = new Date();
   const trimmed = text.trim();
 
-let user = await User.findOne({ telegramId: from.id });
-if (!user) {
-  user = await User.create({
-    telegramId: from.id,
-    username: from.username || '',
-    role: DEFAULT_ADMINS.includes(from.id) ? 'admin' : 'user'
-  });
-}
-
-// ✅ mỗi tin nhắn trong group đếm 1 lần
-user.messageCount = (user.messageCount || 0) + 1;
-
-// nhiệm vụ ngày
-await ensureDailyMission(user._id);
-await updateMissionProgress(user, ctx);
-
-if (user.banned) return next();
-  // ========== ANTI-SPAM ==========
-
-  // 1) Lặp y chang tin trước trong vòng 3 giây → cảnh cáo
-  if (user.lastMessageText === trimmed && user.lastMessageAt) {
-    const diffSec = (now - user.lastMessageAt) / 1000;
-    if (diffSec <= 3) {
-      await addWarning(user, ctx);
-      user.lastMessageAt = now;
-      await user.save();
-      return next();
-    }
+  let user = await User.findOne({ telegramId: from.id });
+  if (!user) {
+    user = await User.create({
+      telegramId: from.id,
+      username: from.username || '',
+      role: DEFAULT_ADMINS.includes(from.id) ? 'admin' : 'user'
+    });
   }
 
-  // 2) Flood control: quá nhiều tin trong cửa sổ ngắn
-  const windowSec = config.spam?.windowSeconds || 10;
-  const maxMsgs = config.spam?.maxMsgsPerWindow || 7;
+  // ✅ mỗi tin nhắn trong group đếm 1 lần
+  user.messageCount = (user.messageCount || 0) + 1;
 
-  if (!user.spamWindowStart) {
-    user.spamWindowStart = now;
-    user.spamCount = 1;
-  } else {
-    const diffSec = (now - user.spamWindowStart) / 1000;
-    if (diffSec <= windowSec) {
-      user.spamCount += 1;
-    } else {
-      // Reset cửa sổ
-      user.spamWindowStart = now;
-      user.spamCount = 1;
-    }
-  }
+  // Nhiệm vụ ngày
+  await ensureDailyMission(user._id);
+  await updateMissionProgress(user, ctx);
 
-  if (user.spamCount > maxMsgs) {
-    await addWarning(user, ctx);
-    user.lastMessageText = trimmed;
-    user.lastMessageAt = now;
-    await user.save();
-    return next();
-  }
-
-  // Nếu đã bị mute thì không cộng XP nữa
-  if (user.muted) {
-    user.lastMessageText = trimmed;
-    user.lastMessageAt = now;
-    await user.save();
+  // Nếu bị ban thì không cộng XP
+  if (user.banned) {
     return next();
   }
 
@@ -157,7 +114,7 @@ if (user.banned) return next();
     return next();
   }
 
-  // ===== LEVEL UP + THƯỞNG COIN (A + B) =====
+  // ===== LEVEL UP + THƯỞNG COIN =====
 
   const oldLevel = calcLevel(user.totalXP); // Level trước khi cộng XP
 
