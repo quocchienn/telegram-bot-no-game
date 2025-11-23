@@ -60,7 +60,6 @@ export default (bot) => {
     );
   });
 
-  // /me – info user
     // /me – info user
   bot.command('me', async (ctx) => {
     let u = await User.findOne({ telegramId: ctx.from.id });
@@ -171,58 +170,6 @@ export default (bot) => {
     });
     await ctx.reply(text, { reply_to_message_id: ctx.message?.message_id });
   });
-  // ================= NHIỆM VỤ: /daily & /claimdaily =================
-
-  // /daily – điểm danh hằng ngày
-  
-    }
-
-    const todayKey = getDayKey();
-    if (user.lastDailyAt === todayKey) {
-      return ctx.reply(
-        '📅 Hôm nay bạn đã điểm danh rồi, quay lại ngày mai nhé!',
-        { reply_to_message_id: ctx.message?.message_id }
-      );
-    }
-
-    // streak: nếu hôm qua có daily → +1, không thì reset = 1
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yKey = getDayKey(yesterday);
-
-    if (user.lastDailyAt === yKey) {
-      user.dailyStreak += 1;
-    } else {
-      user.dailyStreak = 1;
-    }
-
-    user.lastDailyAt = todayKey;
-
-    // thưởng daily
-    const dailyXp = 10;
-    const dailyCoin = 20;
-
-    user.totalXP += dailyXp;
-    user.dayXP += dailyXp;
-    user.weekXP += dailyXp;
-    user.monthXP += dailyXp;
-    user.topCoin += dailyCoin;
-
-    await user.save();
-
-    const level = calcLevel(user.totalXP);
-
-    await ctx.reply(
-      `✅ Điểm danh thành công!\n` +
-      `• +${dailyXp} XP\n` +
-      `• +${dailyCoin} coin\n` +
-      `• Streak: ${user.dailyStreak} ngày\n` +
-      `• Level hiện tại: ${level} (XP: ${user.totalXP})`,
-      { reply_to_message_id: ctx.message?.message_id }
-    );
-  });
-
-  // /claimdaily – nhiệm vụ chat đủ XP trong ngày
   
   // ================= ADMIN PACK =================
 
